@@ -2,6 +2,10 @@
 
 Proyecto base para el examen final de Compiladores.
 
+# CAPTURA CORRESPONDIENTE PARA PRUEBA DE COMPILACIÓN Y TEST:
+
+https://drive.google.com/drive/folders/1dXk_OdEBhXYLqACDJtwAevW8yrMUVvA3?usp=sharing
+
 ## Requisitos
 
 - Java 8 o superior.

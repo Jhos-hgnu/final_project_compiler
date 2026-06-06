@@ -33,5 +33,27 @@ public class SemanticValidator {
         // - SEMANTIC_UNKNOWN_WHERE_COLUMN
         // - SEMANTIC_TYPE_MISMATCH
         // - TRACE|WHERE_TYPE_CHECK|<line>:<column>|<column>|<operator>|<literalType>
+        if (ast.where != null) {
+            for (int i = 0; i < ast.where.conditions.size(); i++) {
+                WhereCondition cond = ast.where.conditions.get(i);
+                String colLower = cond.column.toLowerCase();
+                boolean columnExists = table.containsKey(colLower);
+
+                if (!columnExists) {
+                    result.diagnostics.add(new Diagnostic("SEMANTIC_UNKNOWN_WHERE_COLUMN",
+                            "Columna no existe en WHERE: " + cond.column, cond.columnSpan));
+                }
+                if (columnExists && table.get(colLower) != cond.literalType) {
+                    result.diagnostics.add(new Diagnostic("SEMANTIC_TYPE_MISMATCH",
+                            "Tipo incorrecto en WHERE: columna " + cond.column + " espera "
+                                    + table.get(colLower) + " pero se obtuvo " + cond.literalType,
+                            cond.literalSpan));
+                }
+                result.traces.add("TRACE|WHERE_TYPE_CHECK|" + cond.columnSpan.format()
+                        + "|" + cond.column + "|" + cond.operator + "|" + cond.literalType);
+            }
+        }
     }
+
 }
+

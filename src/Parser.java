@@ -21,12 +21,14 @@ public class Parser {
         // WHERE <columna> <operador> <literal> (AND|OR <columna> <operador> <literal>)*
         // Debe llenar statement.where con SourceSpan exactos.
         if (match(TokenType.WHERE)) {
-            Token current = current();
-            result.diagnostics.add(new Diagnostic(
-                "SYNTACTIC_EXPECTED_WHERE_OPERAND",
-                "Soporte WHERE pendiente: implemente el AST de condiciones.",
-                current.span));
-            while (!check(TokenType.EOF) && !check(TokenType.SEMICOLON)) advance();
+            statement.where = new ConditionChain();
+            parseWhereCondition(statement.where);
+            while (check(TokenType.AND) || check(TokenType.OR)) {
+                String connector = current().lexeme;
+                advance();
+                statement.where.connectors.add(connector.toUpperCase());
+                parseWhereCondition(statement.where);
+            }
         }
 
         if (check(TokenType.SEMICOLON)) advance();
@@ -47,6 +49,41 @@ public class Parser {
             Token next = expect(TokenType.IDENTIFIER, "SYNTACTIC_EXPECTED_COLUMN");
             if (next != null) statement.columns.add(next.lexeme);
         }
+    }
+
+    private void parseWhereCondition(ConditionChain chain) {
+        Token column = expect(TokenType.IDENTIFIER, "SYNTACTIC_EXPECTED_WHERE_COLUMN");
+
+        if(column == null) return;
+
+        Token operator = null;
+        if(check(TokenType.EQUAL) || check(TokenType.GREATER) || check(TokenType.LESS) || check(TokenType.GREATER_EQUAL)
+                        || check(TokenType.LESS_EQUAL) || check(TokenType.NOT_EQUAL)) {
+            operator = advance();
+        } else {
+            return;
+        }
+
+        Token literal = null;
+        LiteralType literalType = LiteralType.UNKNOWN;
+        if (check(TokenType.NUMBER)) {
+            literal = advance();
+            literalType = LiteralType.NUMBER;
+        } else if (check(TokenType.STRING)) {
+            literal = advance();
+            literalType = LiteralType.STRING;
+        } else if (check(TokenType.TRUE) || check(TokenType.FALSE)) {
+            literal = advance();
+            literalType = LiteralType.BOOLEAN;
+        } else {
+            result.diagnostics.add(new Diagnostic(
+                    "SYNTACTIC_EXPECTED_WHERE_OPERAND",
+                    "Se esperaba un literal (número, string o booleano) y se encontró " + current().type,
+                    current().span));
+            return;
+        }
+        chain.conditions.add(new WhereCondition(column.lexeme, operator.lexeme, literal.lexeme, literalType,
+                column.span, operator.span, literal.span));
     }
 
     private Token expect(TokenType type, String code) {
